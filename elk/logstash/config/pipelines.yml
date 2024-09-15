@@ -1,0 +1,11 @@
+- pipeline.id: pipeline1
+  path.config: "/usr/share/logstash/pipeline/statsd.conf"
+  pipeline.workers: 4 
+
+- pipeline.id: pipeline2
+  path.config: "/usr/share/logstash/pipeline/metricbeat-airflow.conf"
+  pipeline.workers: 2  
+
+- pipeline.id: pipeline3
+  path.config: "/usr/share/logstash/pipeline/metricbeat-kafka.conf"
+  pipeline.workers: 2  

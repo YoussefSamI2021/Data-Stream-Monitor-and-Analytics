@@ -1,0 +1,48 @@
+filebeat.inputs:
+  - type: log
+    enabled: true
+    paths:
+      - /usr/share/filebeat/logs/dag_id=*/run_id=*/task_id=*/attempt=*.log
+    multiline.pattern: '^\['
+    multiline.negate: true
+    multiline.match: after
+
+output.kafka:
+  # Kafka broker to send data to
+  hosts: ["44.215.213.113:9094"]
+
+  # Topic in Kafka to which data will be sent
+  topic: "airflow-logs"
+
+  # Kafka message key
+  key: 'airflow-log-key'
+
+  # Kafka partitioner: "random", "round_robin", or "hash"
+  partition.round_robin:
+    reachable_only: false
+
+  # Message delivery timeout
+  timeout: 30s
+
+  # Optional configuration to log when sending fails
+  required_acks: 1
+  compression: gzip
+
+  # Authentication settings if needed (commented out)
+  # username: "<username>"
+  # password: "<password>"
+
+processors:
+  - add_fields:
+      target: ''
+      fields:
+        source: "airflow"  # Additional metadata about the source of the logs
+
+logging:
+  level: info
+  to_files: true
+  files:
+    path: /usr/share/filebeat/logs
+    name: filebeat
+    keepfiles: 7
+    permissions: 0644

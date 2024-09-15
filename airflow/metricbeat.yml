@@ -1,0 +1,35 @@
+metricbeat.config.modules:
+  path: ${path.config}/modules.d/*.yml
+  reload.enabled: false
+
+# Specify the metricsets to collect CPU, memory, and disk usage data
+metricbeat.modules:
+- module: system
+  metricsets:
+    - cpu            # Collect CPU usage metrics
+    - memory         # Collect memory usage metrics
+    - diskio         # Collect disk I/O metrics
+    - filesystem
+  enabled: true
+  period: 20s        # Collect metrics every 30 seconds
+
+  # Optionally, limit the number of top processes to monitor by CPU and memory
+  process.include_top_n:
+    by_cpu: 5
+    by_memory: 5
+
+output.kafka:
+  enabled: true
+  hosts: ["18.189.79.27:9092", "18.189.79.27:9093", "18.189.79.27:9094"]  # Replace with your Kafka broker's IP address
+  topic: 'airflow-system-metrics'  # The Kafka topic to which Metricbeat will send metrics
+  partition.round_robin:
+    reachable_only: false
+  required_acks: 1
+  compression: gzip
+  max_message_bytes: 1000000
+  keep_alive: 0
+  broker_timeout: 10s
+  channel_buffer_size: 256
+  client_id: metricbeat
+  max_in_flight_requests: 1  # Ensure strict ordering of messages
+  delivery_timeout: 120000  # Timeout (in ms) for message delivery

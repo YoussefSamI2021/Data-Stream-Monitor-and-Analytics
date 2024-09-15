@@ -1,0 +1,42 @@
+metricbeat.config.modules:
+  path: ${path.config}/modules.d/*.yml
+  reload.enabled: false
+
+# Specify the metricsets to collect CPU, memory, and disk usage data
+metricbeat.modules:
+- module: system
+  metricsets:
+    - cpu            # Collect CPU usage metrics
+    - memory         # Collect memory usage metrics
+    - diskio         # Collect disk I/O metrics
+    - filesystem
+  enabled: true
+  period: 20s        # Collect metrics every 10 seconds
+
+  # Optionally, limit the number of top processes to monitor by CPU and memory
+  process.include_top_n:
+    by_cpu: 5
+    by_memory: 5
+
+output.kafka:
+  enabled: true
+  hosts: ["18.189.79.27:9092", "18.189.79.27:9093", "18.189.79.27:9093:9094"]  # List of Kafka brokers
+  topic: 'kafka-system-metrics'  # Kafka topic for metrics
+  partition.round_robin:
+    reachable_only: false
+
+  # Ensure acknowledgments align with min.insync.replicas
+  required_acks: 1  # Wait for all in-sync replicas to acknowledge (based on min.insync.replicas=2)
+  compression: gzip  # Use gzip for message compression
+  max_message_bytes: 1000000  # Maximum message size (1MB)
+  
+  # Producer reliability settings
+  retries: 5  # Retry up to 5 times if the message fails
+  broker_timeout: 10s  # Timeout for requests to brokers
+  channel_buffer_size: 256  # Buffer size for the channel
+  keep_alive: 0
+  client_id: metricbeat  # Custom client ID for Metricbeat
+
+  # Additional producer settings for reliability
+  max_in_flight_requests: 1  # Ensure strict ordering of messages
+  delivery_timeout: 120000  # Timeout (in ms) for message delivery
