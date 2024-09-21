@@ -10,16 +10,14 @@ if __name__ == "__main__":
 
     # Kafka and Schema Registry Configurations
     kafka_config = KafkaConfig(
-        topic="Data_Source_v2",
+        topics=["customers_topic", "orders_topic", "payments_topic", "products_topic"],
         bootstrap_servers="18.189.79.27:9092,18.189.79.27:9093,18.189.79.27:9094",
         schema_registry_url="http://18.189.79.27:8081",
-        schema_subject="Data_Source_v2"
+
     )
 
     # S3 Configurations
     s3_config = S3Config(
-        access_key="AKIAY5BTPDTCYOVIKYP3",
-        secret_key="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",
         bucket_path="s3a://dest-data-lake-iti",
         checkpoint_path="s3a://dest-data-lake-iti/chkpoint-1"
     )

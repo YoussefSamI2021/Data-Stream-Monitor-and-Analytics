@@ -1,0 +1,8 @@
+version: '3'
+services:
+  flask-api:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - /home/ubuntu/logs/:/app/files/  # Mount volume for file deletion

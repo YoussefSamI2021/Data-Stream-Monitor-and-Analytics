@@ -1,6 +1,5 @@
 import pyspark.sql.functions as F
 from pyspark.sql.avro.functions import from_avro
-from pyspark.sql.functions import col, when, regexp_extract, date_format
 from utils.schema_registry import SchemaRegistryUtil
 
 class DataProcessor:
@@ -21,13 +20,13 @@ class DataProcessor:
         hadoop_conf.set("fs.s3a.path.style.access", "true")
 
     def read_from_kafka(self):
-        """Read data from Kafka topic"""
+        """Read data from Kafka topics"""
         return self.spark \
             .readStream \
             .format("kafka") \
             .option("kafka.bootstrap.servers", self.kafka_config.bootstrap_servers) \
-            .option("subscribe", self.kafka_config.topic) \
-            .option("startingOffsets", "latest") \
+            .option("subscribe", ",".join(self.kafka_config.topics)) \
+            .option("startingOffsets", "earliest") \
             .option("failOnDataLoss", False) \
             .option("spark.streaming.kafka.maxRatePerPartition", "50") \
             .load()
@@ -35,43 +34,40 @@ class DataProcessor:
     def process_data(self):
         """Process incoming data from Kafka and write to S3"""
         kafka_df = self.read_from_kafka()
-        schema_str = SchemaRegistryUtil.get_avro_schema(self.kafka_config)
+        queries = []
 
-        kafka_df = kafka_df.withColumn('fixedValue', F.expr("substring(value, 6, length(value)-5)"))
+        for topic in self.kafka_config.topics:
+            # Fetch Avro schema for both key and value for the current topic
+            schema_value_str = SchemaRegistryUtil.get_avro_schema(self.kafka_config, topic, is_key=False)
 
-        from_avro_options = {"mode": "PERMISSIVE"}
-        decoded_df = kafka_df.select(
-            from_avro(F.col("fixedValue"), schema_str, from_avro_options).alias("data_source")
-        )
-        kafka_value_df = decoded_df.select("data_source.*")
-        kafka_value_df.printSchema()
+            # Extract and decode Kafka message key and value
+            from_avro_options = {"mode": "PERMISSIVE"}
+            topic_df = kafka_df.filter(F.col("topic") == topic)  # Filter data per topic
 
-        # Data transformations
-        cleaned_df = self.transform_data(kafka_value_df)
-        self.write_to_s3(cleaned_df)
+            topic_df = topic_df.withColumn('fixedValue', F.expr("substring(value, 6, length(value)-5)"))
+            # topic_df = topic_df.withColumn('fixedKey', F.expr("substring(key, 6, length(key)-5)"))
 
+            decoded_df = topic_df.select(
+                # from_avro(F.col("fixedKey"), schema_key_str, from_avro_options).alias("key_data"),
+                from_avro(F.col("fixedValue"), schema_value_str, from_avro_options).alias("value_data")
+            )
 
-    def transform_data(self, df):
-        """Apply data transformations"""
-        df = df.dropna(subset=["Courier_Status"]).dropDuplicates()
-        df = df.withColumn(
-            "formatted_date", 
-            when(col("Date.member1").isNotNull(), date_format(col("Date.member1"), "yyyyMMdd"))
-            .otherwise("not_available")
-        )
-        pattern = r'^(\S+\s+\S+\s+\S+\s+\S+\s+\S+\s+\S+)'
-        df = df.withColumn(
-            "promotion_ids", regexp_extract("promotion_ids", pattern, 1)
-        ).na.fill({"promotion_ids": "not_available"})
-        return df
+            # topic_value_df = decoded_df.select("key_data.*", "value_data.*")
+            topic_value_df = decoded_df.select("value_data.*")
+            topic_value_df.printSchema()
 
-    def write_to_s3(self, df):
+            # Write data to S3 and start streaming queries
+            query = self.write_to_s3(topic_value_df, topic)
+            queries.append(query)
+
+        # Await termination of all queries
+        for query in queries:
+            query.awaitTermination()
+
+    def write_to_s3(self, df, topic):
         """Write the processed data to S3 in parquet format"""
-        df.writeStream \
+        return df.writeStream \
             .format("parquet") \
             .outputMode("append") \
-            .trigger(processingTime='1 second') \
-            .option("path", self.s3_config.bucket_path + "/test") \
-            .option("checkpointLocation", self.s3_config.checkpoint_path+'test') \
-            .start() \
-            .awaitTermination()
+            .option("path", f"{self.s3_config.bucket_path}/Staging/{topic}") \
+            .start()

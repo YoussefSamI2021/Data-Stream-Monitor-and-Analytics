@@ -35,6 +35,7 @@
 - docker exec -it spark-master bash spark-submit --master spark://spark-master:7077 --packages   test.py 
 
 - docker cp spark_stream.py spark-master:/opt/bitnami/spark
+-   
 
 =======================================================================================================
 
@@ -61,6 +62,9 @@
 
 - scp -i ../keys/elk.pem -r ubuntu@107.22.119.65:/home/ubuntu/* ./elk  
 - scp -i ../keys/elk.pem  ubuntu@107.22.119.65:/home/ubuntu/elk     # file You want Upload 
+
+
+
 
 =======================================================================================================
 
@@ -97,6 +101,14 @@
 - docker compose up -d
 - docker compose --profile flower up
 
+
+### API Build
+docker-compose up --build -d
+
+curl -X POST http://107.22.119.65:5000/delete-file \
+    -H "Content-Type: application/json" \
+    -d '{"file_path": "/app/files/largefile.dat"}'
+
 =======================================================================================================
 
 # *** Kafka-ec2 ***
@@ -119,8 +131,15 @@
 
 ### for download files/Dir to server 
 
-- scp -i ../keys/kafka.pem -r ubuntu@18.189.79.27:/home/ubuntu/*  ./airflow   
+- scp -i ../keys/kafka.pem -r ubuntu@18.189.79.27:/home/ubuntu/*  ./kafka   
 
+
+### API Build
+docker-compose up --build -d
+
+curl -X POST http://107.22.119.65:5000/delete-file \
+    -H "Content-Type: application/json" \
+    -d '{"file_path": "/app/files/largefile.dat"}'
 
 =======================================================================================================
 
@@ -138,10 +157,11 @@ docker build -t metrics-scraper .
 docker run -d --name metrics-scraper metrics-scraper
 
 
-docker exec -it airflow-celery-airflow-webserver-1 pip3 install confluent-kafka fastavro ; \
-docker exec -it airflow-celery-airflow-worker-1 pip3 install confluent-kafka fastavro ; \
-docker exec -it airflow-celery-airflow-scheduler-1 pip3 install confluent-kafka fastavro
+docker exec -it airflow-celery-airflow-webserver-1 pip3 install confluent-kafka[avro] fastavro avro-python3; \
+docker exec -it airflow-celery-airflow-worker-1 pip3 install confluent-kafka[avro] fastavro avro-python3; \
+docker exec -it airflow-celery-airflow-scheduler-1 pip3 install confluent-kafka[avro] fastavro avro-python3
 
+pip install avro-python3
 
 
 chmod -R 777 logs
@@ -155,9 +175,14 @@ docker container rm -f $(docker container ps -a -q) # to delete all containers e
 
 
 
+### take a backup
+###create file called bk-@date
 
+scp -i ../keys/elk.pem        -r ubuntu@107.22.119.65:/home/ubuntu/*  ./elk
+scp -i ../keys/kafka.pem      -r ubuntu@18.189.79.27:/home/ubuntu/*   ./kafka
+scp -i ../keys/airflow-pk.pem -r ubuntu@98.82.44.70:/home/ubuntu/*    ./airflow
+scp -i ../keys/pyspark.pem    -r ubuntu@54.157.252.103:/home/ubuntu/* ./pyspark
 
-
-
-
-
+<[^/]+>.parquet
+curl -X DELETE http://18.189.79.27:8081/subjects/customers_topic-value
+curl -X DELETE http://18.189.79.27:8081/subjects/products_topic-value
