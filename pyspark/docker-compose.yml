@@ -1,4 +1,3 @@
-
 services:
 
   spark-master:
@@ -15,8 +14,6 @@ services:
         - "7077:7077"  # Spark Master Port
       networks:
         - iti_stream
-      volumes:
-        - shared-workspace:/opt/workspace
 
 
   spark-worker-1:
@@ -29,8 +26,6 @@ services:
       - SPARK_WORKER_MEMORY=2G
     networks:
       - iti_stream
-    volumes:
-      - shared-workspace:/opt/workspace
 
   spark-worker-2:
     image: bitnami/spark:latest
@@ -42,35 +37,6 @@ services:
       - SPARK_WORKER_MEMORY=2G
     networks:
       - iti_stream
-    volumes:
-      - shared-workspace:/opt/workspace
-
-
-
-  jupyterlab:
-    image: jupyter/pyspark-notebook:latest
-    container_name: jupyterlab
-    user: root
-    environment:
-      - SPARK_MASTER=spark://spark-master:7077
-      - JUPYTER_PASSWORD=admin  # Add your secure password here
-    ports:
-      - "8888:8888"
-    volumes:
-      - shared-workspace:/opt/workspace
-    depends_on:
-      - spark-master
-      - spark-worker-1
-      - spark-worker-2
-    networks:
-      - iti_stream
-
-
-
-volumes:
-  shared-workspace:
-    name: "hadoop-distributed-file-system"
-    driver: local
 
 
 

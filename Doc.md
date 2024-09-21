@@ -35,7 +35,7 @@
 - docker exec -it spark-master bash spark-submit --master spark://spark-master:7077 --packages   test.py 
 
 - docker cp spark_stream.py spark-master:/opt/bitnami/spark
--   
+-    docker exec -it spark-master spark-submit --master spark://spark-master:7077 --deploy-mode cluster --packages com.github.jnr:jnr-posix:3.1.15,org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0,org.apache.spark:spark-avro_2.12:3.5.0,org.apache.hadoop:hadoop-aws:3.3.4,com.amazonaws:aws-java-sdk-bundle:1.12.464 test/main.py
 
 =======================================================================================================
 
@@ -149,7 +149,7 @@ pip install pipreqs  # to get requirements
 
 docker container ps -a --format "table \t{{.Names}}\t{{.Status}}"
 
-
+docker container ps -a -s --format "table \t{{.Names}}\t{{.Status}}\t{{.Size}}"
 # Build the Docker image
 docker build -t metrics-scraper .
 
