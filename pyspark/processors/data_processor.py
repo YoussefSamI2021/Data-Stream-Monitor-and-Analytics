@@ -70,4 +70,5 @@ class DataProcessor:
             .format("parquet") \
             .outputMode("append") \
             .option("path", f"{self.s3_config.bucket_path}/Staging/{topic}") \
+            .option("checkpointLocation", f"{self.s3_config.checkpoint_path}/{topic}") \
             .start()
